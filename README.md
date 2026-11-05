@@ -36,11 +36,11 @@ The nodes are in review for n8n verification. After approval you can add them fr
 
 Create a **Textbee API** credential:
 
-| Field                      | Required     | Description                                                                                                                                                       |
-| -------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **API Key**                | Yes          | From the [textbee dashboard](https://app.textbee.dev/dashboard). See [API keys](https://textbee.dev/docs/getting-started/api-keys).                               |
-| **Base URL**               | No           | Defaults to `https://api.textbee.dev`. Change it for [self-hosted](https://textbee.dev/docs/self-hosting) instances. The `/api/v1` suffix is added automatically. |
-| **Webhook Signing Secret** | Trigger only | At least 20 characters. textbee signs every webhook delivery with it, and the trigger rejects requests without a valid signature.                                 |
+| Field                      | Required | Description                                                                                                                                                                                    |
+| -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API Key**                | Yes      | From the [textbee dashboard](https://app.textbee.dev/dashboard). See [API keys](https://textbee.dev/docs/getting-started/api-keys).                                                            |
+| **Base URL**               | No       | Defaults to `https://api.textbee.dev`. Change it for [self-hosted](https://textbee.dev/docs/self-hosting) instances. The `/api/v1` suffix is added automatically.                              |
+| **Webhook Signing Secret** | No       | Leave it empty: the textbee Trigger creates a separate secret for each workflow. Set it (at least 20 characters) only if you need the same secret across workflows. If set, it is always used. |
 
 ## Operations
 
@@ -57,9 +57,24 @@ Create a **Textbee API** credential:
 
 Starts a workflow on these events: `MESSAGE_RECEIVED`, `MESSAGE_SENT`, `MESSAGE_DELIVERED`, `MESSAGE_FAILED`, `UNKNOWN_STATE`.
 
-When you activate the workflow, the trigger registers a webhook subscription in textbee that points at the n8n production webhook URL. When you deactivate it, the trigger deletes the subscription. If the URL, the events, or the signing secret change, the trigger updates the existing subscription instead of creating a new one.
+No setup in the textbee dashboard is needed. When you publish the workflow, the trigger creates a webhook subscription in textbee that points at the n8n production webhook URL. When you unpublish it, the trigger deletes the subscription. If the URL, the events, or the signing secret change, the trigger updates the existing subscription instead of creating a new one. If events stop arriving, publish the workflow again.
 
-Every request is checked against the `X-Signature` header (HMAC-SHA256 of the raw body). Requests with a missing or wrong signature get HTTP 401.
+The subscription is named `n8n: <workflow name> (<n8n host>)`, so you can see in the textbee dashboard which n8n instance owns it.
+
+A textbee account can have 5 webhook subscriptions by default. The limit depends on your plan. Each published workflow with a textbee Trigger uses one.
+
+#### Signing secret
+
+When the credential **Webhook Signing Secret** is empty, the trigger creates a random secret for each workflow and keeps it in the workflow's static data in n8n. Each workflow then has its own secret, and the secret never appears in node output. When the credential secret is set, every trigger on that credential uses it, and the trigger also checks that each delivery belongs to its own subscription.
+
+#### Signature checks and replay protection
+
+textbee signs every delivery. Requests with a missing or wrong signature get HTTP 401.
+
+- `X-Textbee-Signature: t=<unix seconds>,v1=<hex>`: `v1` is the HMAC-SHA256 of `<t>.<raw body>`. The trigger rejects a timestamp more than 5 minutes away from the current time, so a captured request cannot be replayed later. `X-Textbee-Timestamp` carries the same timestamp.
+- `X-Signature`: the HMAC-SHA256 of the raw body, without a timestamp. textbee still sends it for older integrations.
+
+When the textbee API reports timestamped signatures for the subscription, the trigger requires a valid `X-Textbee-Signature` and rejects requests that only carry `X-Signature`. Older and self-hosted textbee versions that do not send the timestamped header are still accepted with `X-Signature`.
 
 ## Usage
 
@@ -77,7 +92,7 @@ A successful response means textbee accepted and queued the message. It is not a
 1. In the textbee Android app, turn on **Receive SMS**.
 2. Add a **textbee Trigger** and select **Message Received**.
 3. Connect a **textbee** node with Operation **Send**. Set Recipients to `{{ $json.sender }}` and write the reply in Message.
-4. Activate the workflow. The production webhook URL must be public, because textbee does not deliver to localhost or private addresses. In development, use a tunnel.
+4. Publish the workflow. The production webhook URL must be public, because textbee does not deliver to localhost or private addresses. In development, use a tunnel.
 
 textbee retries failed deliveries. Use the `idempotencyKey` field of the payload to skip duplicates.
 
