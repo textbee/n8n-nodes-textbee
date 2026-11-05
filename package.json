@@ -1,6 +1,6 @@
 {
 	"name": "@textbee/n8n-nodes-textbee",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "Official n8n nodes for textbee.dev: send and receive SMS through your own Android phone",
 	"license": "MIT",
 	"packageManager": "pnpm@9.14.2",

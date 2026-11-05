@@ -9,10 +9,16 @@ import {
 	type IWebhookResponseData,
 } from 'n8n-workflow';
 
-import { verifySignature } from '../Textbee/shared/signature';
+import {
+	generateSigningSecret,
+	verifySignature,
+	verifyTimestampedSignature,
+} from '../Textbee/shared/signature';
 import {
 	isNotFoundError,
 	planSubscription,
+	resolveSigningSecret,
+	subscriptionName,
 	type DesiredSubscription,
 	type WebhookSubscription,
 } from '../Textbee/shared/subscription';
@@ -57,15 +63,32 @@ function webhookPath(this: IHookFunctions, webhookId: string): string {
 	return `/webhooks/${webhookId}`;
 }
 
-async function desiredSubscription(this: IHookFunctions): Promise<DesiredSubscription> {
+/**
+ * The subscription this trigger should have. With an empty credential secret the
+ * trigger uses its own stored secret. `generate` creates and stores one when it is
+ * missing; without it, a missing secret returns undefined (an update is needed).
+ */
+async function desiredSubscription(
+	this: IHookFunctions,
+	generate: boolean,
+): Promise<DesiredSubscription | undefined> {
 	const credentials = await this.getCredentials('textbeeApi');
-	const signingSecret = String(credentials.webhookSigningSecret ?? '');
-	if (signingSecret.length < MIN_SECRET_LENGTH) {
+	const sharedSecret = String(credentials.webhookSigningSecret ?? '');
+	if (sharedSecret !== '' && sharedSecret.length < MIN_SECRET_LENGTH) {
 		throw new NodeOperationError(
 			this.getNode(),
-			`Set a Webhook Signing Secret of at least ${MIN_SECRET_LENGTH} characters on the textbee API credential`,
+			`The Webhook Signing Secret on the textbee API credential must be at least ${MIN_SECRET_LENGTH} characters. Leave it empty to let the trigger create one.`,
 		);
 	}
+
+	const webhookData = this.getWorkflowStaticData('node');
+	let signingSecret = resolveSigningSecret(sharedSecret, webhookData.signingSecret);
+	if (!signingSecret) {
+		if (!generate) return undefined;
+		signingSecret = generateSigningSecret();
+		webhookData.signingSecret = signingSecret;
+	}
+
 	return {
 		deliveryUrl: this.getNodeWebhookUrl('default') as string,
 		events: this.getNodeParameter('events') as string[],
@@ -73,8 +96,18 @@ async function desiredSubscription(this: IHookFunctions): Promise<DesiredSubscri
 	};
 }
 
-function subscriptionName(this: IHookFunctions): string {
-	return `n8n: ${this.getWorkflow().name ?? 'workflow'}`.slice(0, 64);
+/** Remember whether the API signs this subscription with X-Textbee-Signature. */
+function storeSignatureVersion(
+	webhookData: IDataObject,
+	subscription: WebhookSubscription | undefined,
+): void {
+	if (Number(subscription?.signatureVersion ?? 0) >= 2) webhookData.signatureVersion = 2;
+	else delete webhookData.signatureVersion;
+}
+
+/** Subscription name for this workflow and its delivery URL host. */
+function nameFor(this: IHookFunctions, desired: DesiredSubscription): string {
+	return subscriptionName(this.getWorkflow().name ?? 'workflow', desired.deliveryUrl);
 }
 
 /** PATCH a subscription to the desired state. Returns false when it no longer exists. */
@@ -84,13 +117,19 @@ async function updateSubscription(
 	desired: DesiredSubscription,
 ): Promise<boolean> {
 	try {
-		await textbeeApiRequest.call(this, 'PATCH', webhookPath.call(this, webhookId), {
-			name: subscriptionName.call(this),
-			deliveryUrl: desired.deliveryUrl,
-			events: desired.events,
-			signingSecret: desired.signingSecret,
-			isActive: true,
-		});
+		const response = (await textbeeApiRequest.call(
+			this,
+			'PATCH',
+			webhookPath.call(this, webhookId),
+			{
+				name: nameFor.call(this, desired),
+				deliveryUrl: desired.deliveryUrl,
+				events: desired.events,
+				signingSecret: desired.signingSecret,
+				isActive: true,
+			},
+		)) as { data?: WebhookSubscription } | undefined;
+		storeSignatureVersion(this.getWorkflowStaticData('node'), response?.data);
 		return true;
 	} catch (error) {
 		if (isNotFoundError(error)) return false;
@@ -138,7 +177,7 @@ export class TextbeeTrigger implements INodeType {
 			},
 			{
 				displayName:
-					'Set a Webhook Signing Secret (at least 20 characters) on the textbee API credential. textbee only delivers to public URLs, so the n8n test URL on localhost does not work: use a tunnel in development. For Message Received, turn on Receive SMS in the textbee Android app.',
+					'Publishing this workflow creates the webhook in textbee for you. You do not need to add a webhook in the textbee dashboard. textbee only delivers to public URLs, so a localhost n8n needs a tunnel. For Message Received, turn on Receive SMS in the textbee Android app. If events stop arriving, publish the workflow again.',
 				name: 'triggerNotice',
 				type: 'notice',
 				default: '',
@@ -148,6 +187,7 @@ export class TextbeeTrigger implements INodeType {
 
 	webhookMethods = {
 		default: {
+			/** True when the stored subscription already matches the desired state. */
 			async checkExists(this: IHookFunctions): Promise<boolean> {
 				const webhookData = this.getWorkflowStaticData('node');
 				const webhookId = webhookData.webhookId as string | undefined;
@@ -171,15 +211,17 @@ export class TextbeeTrigger implements INodeType {
 					delete webhookData.webhookId;
 					return false;
 				}
+				storeSignatureVersion(webhookData, subscription);
 
 				// On a mismatch keep the id: create() patches this subscription in place.
-				const desired = await desiredSubscription.call(this);
-				return planSubscription(subscription, desired) === 'keep';
+				const desired = await desiredSubscription.call(this, false);
+				return desired !== undefined && planSubscription(subscription, desired) === 'keep';
 			},
 
+			/** Patch the stored or a same-URL subscription, else create a new one. */
 			async create(this: IHookFunctions): Promise<boolean> {
 				const webhookData = this.getWorkflowStaticData('node');
-				const desired = await desiredSubscription.call(this);
+				const desired = (await desiredSubscription.call(this, true)) as DesiredSubscription;
 
 				const storedId = webhookData.webhookId as string | undefined;
 				if (storedId && (await updateSubscription.call(this, storedId, desired))) {
@@ -201,16 +243,18 @@ export class TextbeeTrigger implements INodeType {
 				}
 
 				const response = (await textbeeApiRequest.call(this, 'POST', '/webhooks', {
-					name: subscriptionName.call(this),
+					name: nameFor.call(this, desired),
 					deliveryUrl: desired.deliveryUrl,
 					signingSecret: desired.signingSecret,
 					events: desired.events,
 				})) as { data: WebhookSubscription };
 
 				webhookData.webhookId = response.data._id;
+				storeSignatureVersion(webhookData, response.data);
 				return true;
 			},
 
+			/** Delete the subscription and forget its id, secret and signature version. */
 			async delete(this: IHookFunctions): Promise<boolean> {
 				const webhookData = this.getWorkflowStaticData('node');
 				const webhookId = webhookData.webhookId as string | undefined;
@@ -224,32 +268,55 @@ export class TextbeeTrigger implements INodeType {
 				}
 
 				delete webhookData.webhookId;
+				delete webhookData.signingSecret;
+				delete webhookData.signatureVersion;
 				return true;
 			},
 		},
 	};
 
+	/** Verify the signature and subscription, then start a run for a selected event. */
 	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
 		const credentials = await this.getCredentials('textbeeApi');
-		const signingSecret = credentials.webhookSigningSecret as string | undefined;
+		const webhookData = this.getWorkflowStaticData('node');
+		// Neither secret set means verification fails and the request gets a 401.
+		const signingSecret = resolveSigningSecret(
+			credentials.webhookSigningSecret,
+			webhookData.signingSecret,
+		);
 		const headerData = this.getHeaderData();
-		const signatureHeader = headerData['x-signature'] as string | undefined;
+		const legacyHeader = headerData['x-signature'] as string | undefined;
+		const timestampedHeader = headerData['x-textbee-signature'] as string | undefined;
 
 		const rawBody = this.getRequestObject().rawBody;
 		const bodyBuffer = Buffer.isBuffer(rawBody)
 			? rawBody
 			: Buffer.from(typeof rawBody === 'string' ? rawBody : JSON.stringify(this.getBodyData()));
 
-		if (!verifySignature(bodyBuffer, signatureHeader, signingSecret)) {
+		// Once the API reported signature version 2, X-Textbee-Signature is required.
+		// Accepting X-Signature alone would let an attacker strip the timestamped
+		// header and replay an old delivery. Older APIs only send X-Signature.
+		const requireTimestamped = Number(webhookData.signatureVersion ?? 0) >= 2;
+		const valid =
+			requireTimestamped || timestampedHeader !== undefined
+				? verifyTimestampedSignature(
+						bodyBuffer,
+						timestampedHeader,
+						signingSecret,
+						Math.floor(Date.now() / 1000),
+					)
+				: verifySignature(bodyBuffer, legacyHeader, signingSecret);
+
+		if (!valid) {
 			this.getResponseObject().status(401).json({ error: 'Invalid signature' });
 			return { noWebhookResponse: true };
 		}
 
 		const bodyData = this.getBodyData() as IDataObject;
 
-		// The signing secret is shared by every trigger on the credential, so also
+		// A credential secret is shared by every trigger on the credential, so also
 		// check that the delivery belongs to this trigger's subscription.
-		const ownId = this.getWorkflowStaticData('node').webhookId as string | undefined;
+		const ownId = webhookData.webhookId as string | undefined;
 		const deliveredFor = bodyData.webhookSubscriptionId as string | undefined;
 		if (ownId && deliveredFor && String(deliveredFor) !== String(ownId)) {
 			this.getResponseObject().status(401).json({ error: 'Unknown subscription' });
