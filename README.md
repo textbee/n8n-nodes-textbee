@@ -20,11 +20,13 @@ The textbee node can also be used as a tool by the n8n AI Agent.
 3. Enter `@textbee/n8n-nodes-textbee`.
 4. Agree to the risks and install.
 
-Or set the package in the environment:
+Or install it from the environment when n8n starts. The value is a JSON array:
 
 ```bash
-N8N_COMMUNITY_PACKAGES=@textbee/n8n-nodes-textbee
+N8N_COMMUNITY_PACKAGES='[{"name":"@textbee/n8n-nodes-textbee"}]'
 ```
+
+Restart n8n after you set it. See [installing with environment variables](https://docs.n8n.io/integrations/community-nodes/installation-and-management/environment-variable-installation/) in the n8n docs.
 
 ### n8n Cloud
 
