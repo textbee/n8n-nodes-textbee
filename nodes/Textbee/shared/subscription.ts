@@ -4,6 +4,8 @@ export type WebhookSubscription = {
 	events?: string[];
 	isActive?: boolean;
 	signingSecret?: string;
+	/** 2 when the API also sends X-Textbee-Signature with a timestamp. */
+	signatureVersion?: number;
 };
 
 export type DesiredSubscription = {

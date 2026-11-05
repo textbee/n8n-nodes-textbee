@@ -9,7 +9,11 @@ import {
 	type IWebhookResponseData,
 } from 'n8n-workflow';
 
-import { generateSigningSecret, verifySignature } from '../Textbee/shared/signature';
+import {
+	generateSigningSecret,
+	verifySignature,
+	verifyTimestampedSignature,
+} from '../Textbee/shared/signature';
 import {
 	isNotFoundError,
 	planSubscription,
@@ -92,6 +96,15 @@ async function desiredSubscription(
 	};
 }
 
+/** Remember whether the API signs this subscription with X-Textbee-Signature. */
+function storeSignatureVersion(
+	webhookData: IDataObject,
+	subscription: WebhookSubscription | undefined,
+): void {
+	if (Number(subscription?.signatureVersion ?? 0) >= 2) webhookData.signatureVersion = 2;
+	else delete webhookData.signatureVersion;
+}
+
 function nameFor(this: IHookFunctions, desired: DesiredSubscription): string {
 	return subscriptionName(this.getWorkflow().name ?? 'workflow', desired.deliveryUrl);
 }
@@ -103,13 +116,19 @@ async function updateSubscription(
 	desired: DesiredSubscription,
 ): Promise<boolean> {
 	try {
-		await textbeeApiRequest.call(this, 'PATCH', webhookPath.call(this, webhookId), {
-			name: nameFor.call(this, desired),
-			deliveryUrl: desired.deliveryUrl,
-			events: desired.events,
-			signingSecret: desired.signingSecret,
-			isActive: true,
-		});
+		const response = (await textbeeApiRequest.call(
+			this,
+			'PATCH',
+			webhookPath.call(this, webhookId),
+			{
+				name: nameFor.call(this, desired),
+				deliveryUrl: desired.deliveryUrl,
+				events: desired.events,
+				signingSecret: desired.signingSecret,
+				isActive: true,
+			},
+		)) as { data?: WebhookSubscription } | undefined;
+		storeSignatureVersion(this.getWorkflowStaticData('node'), response?.data);
 		return true;
 	} catch (error) {
 		if (isNotFoundError(error)) return false;
@@ -190,6 +209,7 @@ export class TextbeeTrigger implements INodeType {
 					delete webhookData.webhookId;
 					return false;
 				}
+				storeSignatureVersion(webhookData, subscription);
 
 				// On a mismatch keep the id: create() patches this subscription in place.
 				const desired = await desiredSubscription.call(this, false);
@@ -227,6 +247,7 @@ export class TextbeeTrigger implements INodeType {
 				})) as { data: WebhookSubscription };
 
 				webhookData.webhookId = response.data._id;
+				storeSignatureVersion(webhookData, response.data);
 				return true;
 			},
 
@@ -244,6 +265,7 @@ export class TextbeeTrigger implements INodeType {
 
 				delete webhookData.webhookId;
 				delete webhookData.signingSecret;
+				delete webhookData.signatureVersion;
 				return true;
 			},
 		},
@@ -258,14 +280,29 @@ export class TextbeeTrigger implements INodeType {
 			webhookData.signingSecret,
 		);
 		const headerData = this.getHeaderData();
-		const signatureHeader = headerData['x-signature'] as string | undefined;
+		const legacyHeader = headerData['x-signature'] as string | undefined;
+		const timestampedHeader = headerData['x-textbee-signature'] as string | undefined;
 
 		const rawBody = this.getRequestObject().rawBody;
 		const bodyBuffer = Buffer.isBuffer(rawBody)
 			? rawBody
 			: Buffer.from(typeof rawBody === 'string' ? rawBody : JSON.stringify(this.getBodyData()));
 
-		if (!verifySignature(bodyBuffer, signatureHeader, signingSecret)) {
+		// Once the API reported signature version 2, X-Textbee-Signature is required.
+		// Accepting X-Signature alone would let an attacker strip the timestamped
+		// header and replay an old delivery. Older APIs only send X-Signature.
+		const requireTimestamped = Number(webhookData.signatureVersion ?? 0) >= 2;
+		const valid =
+			requireTimestamped || timestampedHeader !== undefined
+				? verifyTimestampedSignature(
+						bodyBuffer,
+						timestampedHeader,
+						signingSecret,
+						Math.floor(Date.now() / 1000),
+					)
+				: verifySignature(bodyBuffer, legacyHeader, signingSecret);
+
+		if (!valid) {
 			this.getResponseObject().status(401).json({ error: 'Invalid signature' });
 			return { noWebhookResponse: true };
 		}
