@@ -36,6 +36,19 @@ export function planSubscription(
 	return matches ? 'keep' : 'update';
 }
 
+/**
+ * The credential secret wins when set, so 1.0.0 setups keep working.
+ * Otherwise use the secret the trigger stored for its own subscription.
+ */
+export function resolveSigningSecret(
+	credentialSecret: unknown,
+	storedSecret: unknown,
+): string | undefined {
+	if (typeof credentialSecret === 'string' && credentialSecret !== '') return credentialSecret;
+	if (typeof storedSecret === 'string' && storedSecret !== '') return storedSecret;
+	return undefined;
+}
+
 /** True when an n8n HTTP helper error is a 404 from the API. */
 export function isNotFoundError(error: unknown): boolean {
 	if (typeof error !== 'object' || error === null) return false;

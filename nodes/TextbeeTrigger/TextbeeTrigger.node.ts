@@ -9,10 +9,11 @@ import {
 	type IWebhookResponseData,
 } from 'n8n-workflow';
 
-import { verifySignature } from '../Textbee/shared/signature';
+import { generateSigningSecret, verifySignature } from '../Textbee/shared/signature';
 import {
 	isNotFoundError,
 	planSubscription,
+	resolveSigningSecret,
 	type DesiredSubscription,
 	type WebhookSubscription,
 } from '../Textbee/shared/subscription';
@@ -57,15 +58,32 @@ function webhookPath(this: IHookFunctions, webhookId: string): string {
 	return `/webhooks/${webhookId}`;
 }
 
-async function desiredSubscription(this: IHookFunctions): Promise<DesiredSubscription> {
+/**
+ * The subscription this trigger should have. With an empty credential secret the
+ * trigger uses its own stored secret. `generate` creates and stores one when it is
+ * missing; without it, a missing secret returns undefined (an update is needed).
+ */
+async function desiredSubscription(
+	this: IHookFunctions,
+	generate: boolean,
+): Promise<DesiredSubscription | undefined> {
 	const credentials = await this.getCredentials('textbeeApi');
-	const signingSecret = String(credentials.webhookSigningSecret ?? '');
-	if (signingSecret.length < MIN_SECRET_LENGTH) {
+	const sharedSecret = String(credentials.webhookSigningSecret ?? '');
+	if (sharedSecret !== '' && sharedSecret.length < MIN_SECRET_LENGTH) {
 		throw new NodeOperationError(
 			this.getNode(),
-			`Set a Webhook Signing Secret of at least ${MIN_SECRET_LENGTH} characters on the textbee API credential`,
+			`The Webhook Signing Secret on the textbee API credential must be at least ${MIN_SECRET_LENGTH} characters. Leave it empty to let the trigger create one.`,
 		);
 	}
+
+	const webhookData = this.getWorkflowStaticData('node');
+	let signingSecret = resolveSigningSecret(sharedSecret, webhookData.signingSecret);
+	if (!signingSecret) {
+		if (!generate) return undefined;
+		signingSecret = generateSigningSecret();
+		webhookData.signingSecret = signingSecret;
+	}
+
 	return {
 		deliveryUrl: this.getNodeWebhookUrl('default') as string,
 		events: this.getNodeParameter('events') as string[],
@@ -138,7 +156,7 @@ export class TextbeeTrigger implements INodeType {
 			},
 			{
 				displayName:
-					'Set a Webhook Signing Secret (at least 20 characters) on the textbee API credential. textbee only delivers to public URLs, so the n8n test URL on localhost does not work: use a tunnel in development. For Message Received, turn on Receive SMS in the textbee Android app.',
+					'Publishing this workflow creates the webhook in textbee for you. You do not need to add a webhook in the textbee dashboard. textbee only delivers to public URLs, so a localhost n8n needs a tunnel. For Message Received, turn on Receive SMS in the textbee Android app. If events stop arriving, publish the workflow again.',
 				name: 'triggerNotice',
 				type: 'notice',
 				default: '',
@@ -173,13 +191,13 @@ export class TextbeeTrigger implements INodeType {
 				}
 
 				// On a mismatch keep the id: create() patches this subscription in place.
-				const desired = await desiredSubscription.call(this);
-				return planSubscription(subscription, desired) === 'keep';
+				const desired = await desiredSubscription.call(this, false);
+				return desired !== undefined && planSubscription(subscription, desired) === 'keep';
 			},
 
 			async create(this: IHookFunctions): Promise<boolean> {
 				const webhookData = this.getWorkflowStaticData('node');
-				const desired = await desiredSubscription.call(this);
+				const desired = (await desiredSubscription.call(this, true)) as DesiredSubscription;
 
 				const storedId = webhookData.webhookId as string | undefined;
 				if (storedId && (await updateSubscription.call(this, storedId, desired))) {
@@ -224,6 +242,7 @@ export class TextbeeTrigger implements INodeType {
 				}
 
 				delete webhookData.webhookId;
+				delete webhookData.signingSecret;
 				return true;
 			},
 		},
@@ -231,7 +250,12 @@ export class TextbeeTrigger implements INodeType {
 
 	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
 		const credentials = await this.getCredentials('textbeeApi');
-		const signingSecret = credentials.webhookSigningSecret as string | undefined;
+		const webhookData = this.getWorkflowStaticData('node');
+		// Neither secret set means verification fails and the request gets a 401.
+		const signingSecret = resolveSigningSecret(
+			credentials.webhookSigningSecret,
+			webhookData.signingSecret,
+		);
 		const headerData = this.getHeaderData();
 		const signatureHeader = headerData['x-signature'] as string | undefined;
 
@@ -247,9 +271,9 @@ export class TextbeeTrigger implements INodeType {
 
 		const bodyData = this.getBodyData() as IDataObject;
 
-		// The signing secret is shared by every trigger on the credential, so also
+		// A credential secret is shared by every trigger on the credential, so also
 		// check that the delivery belongs to this trigger's subscription.
-		const ownId = this.getWorkflowStaticData('node').webhookId as string | undefined;
+		const ownId = webhookData.webhookId as string | undefined;
 		const deliveredFor = bodyData.webhookSubscriptionId as string | undefined;
 		if (ownId && deliveredFor && String(deliveredFor) !== String(ownId)) {
 			this.getResponseObject().status(401).json({ error: 'Unknown subscription' });

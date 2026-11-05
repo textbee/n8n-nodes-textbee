@@ -43,8 +43,8 @@ export class TextbeeApi implements ICredentialType {
 			typeOptions: { password: true },
 			default: '',
 			description:
-				'Shared secret (at least 20 characters) used to sign and verify webhook deliveries. Required when using the textbee Trigger node.',
-			hint: 'Only required when using the textbee Trigger node',
+				'Optional. Leave empty and the textbee Trigger creates a separate secret for each workflow. Set it only if you need the same secret across workflows.',
+			hint: 'If set, use at least 20 characters',
 		},
 	];
 

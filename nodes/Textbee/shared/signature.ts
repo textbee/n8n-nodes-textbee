@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 /** Hex HMAC-SHA256 of the request body, the same digest textbee sends as X-Signature. */
 export function computeSignature(body: Buffer | string, secret: string): string {
@@ -17,4 +17,9 @@ export function verifySignature(
 	const provided = Buffer.from(header.trim().toLowerCase(), 'utf8');
 
 	return expected.length === provided.length && timingSafeEqual(expected, provided);
+}
+
+/** New random signing secret: 32 bytes as 64 hex characters. */
+export function generateSigningSecret(): string {
+	return randomBytes(32).toString('hex');
 }
