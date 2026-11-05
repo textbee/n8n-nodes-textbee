@@ -67,7 +67,7 @@ Every request is checked against the `X-Signature` header (HMAC-SHA256 of the ra
 
 1. Add a **textbee** node.
 2. Set Resource to **Message** and Operation to **Send**.
-3. Enter the **Message** and the **Recipients** (E.164 format, for example `+15555550123`, comma-separated).
+3. Enter the **Message** and the **Recipients** (phone numbers or short codes, comma-separated). International format, for example `+15555550123`, reaches any country. Local numbers and short codes reach recipients in the sending phone's country.
 4. Optionally pick a **Device**. Without one, textbee uses your default device.
 
 A successful response means textbee accepted and queued the message. It is not a delivery confirmation. To follow the status, use **Get Many** with the `smsBatchId` filter, or a **textbee Trigger** on **Message Delivered** and **Message Failed**.

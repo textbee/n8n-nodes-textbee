@@ -46,7 +46,7 @@ export const messageSendBulkDescription: INodeProperties[] = [
 						default: '',
 						required: true,
 						placeholder: '+12015550123',
-						description: 'E.164 numbers, comma-separated',
+						description: 'Phone numbers or short codes, comma-separated. International format, for example +15555550123, reaches any country.',
 					},
 					{
 						displayName: 'SIM Subscription ID',
