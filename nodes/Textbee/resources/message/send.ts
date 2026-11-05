@@ -37,7 +37,7 @@ export const messageSendDescription: INodeProperties[] = [
 		required: true,
 		placeholder: '+12015550123, +12015550124',
 		description:
-			'Phone numbers in E.164 format. Separate multiple recipients with commas. Each recipient counts as one message against your plan.',
+			'Phone numbers or short codes. International format, for example +15555550123, reaches any country. Local numbers and short codes reach recipients in the same country as the sending phone. Separate multiple recipients with commas. Each recipient counts as one message against your plan.',
 		displayOptions: {
 			show: showOnlyForMessageSend,
 		},
