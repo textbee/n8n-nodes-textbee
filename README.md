@@ -9,7 +9,7 @@ Official [n8n](https://n8n.io) nodes for [textbee.dev](https://textbee.dev), the
 - **textbee** node: send SMS (one message or bulk), read message history, list devices, manage webhook subscriptions.
 - **textbee Trigger** node: start a workflow when your phone receives an SMS, or when a sent SMS is sent, delivered, or fails.
 
-Both nodes can also be used as tools by the n8n AI Agent.
+The textbee node can also be used as a tool by the n8n AI Agent.
 
 ## Installation
 

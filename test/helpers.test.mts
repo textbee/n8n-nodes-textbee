@@ -1,7 +1,11 @@
 import { createHmac } from 'crypto';
 import { describe, expect, it } from 'vitest';
 
-import { buildBulkMessages, splitRecipients } from '../nodes/Textbee/shared/bulk';
+import {
+	InvalidScheduleError,
+	buildBulkMessages,
+	splitRecipients,
+} from '../nodes/Textbee/shared/bulk';
 import { baseUrlExpression, normalizeBaseUrl } from '../nodes/Textbee/shared/baseUrl';
 import { computeSignature, verifySignature } from '../nodes/Textbee/shared/signature';
 import { isNotFoundError, planSubscription } from '../nodes/Textbee/shared/subscription';
@@ -116,6 +120,17 @@ describe('isObjectId', () => {
 	});
 });
 
+describe('bulk schedule validation', () => {
+	it('names the entry with an invalid date', () => {
+		expect(() =>
+			buildBulkMessages([
+				{ message: 'ok', recipients: '+15555550100' },
+				{ message: 'bad', recipients: '+15555550101', scheduledAt: 'tomorrow-ish' },
+			]),
+		).toThrow(InvalidScheduleError);
+	});
+});
+
 describe('stripSecrets', () => {
 	it('removes signing secrets and push tokens, top level and nested', () => {
 		const [item] = stripSecrets([
@@ -124,7 +139,7 @@ describe('stripSecrets', () => {
 					_id: 'x',
 					signingSecret: 's',
 					webhookSubscriptionData: { name: 'n', signingSecret: 's' },
-					deviceData: { model: 'Pixel', fcmToken: 't' },
+					deviceData: { model: 'Pixel', fcmToken: 't', serial: 'abc123' },
 				},
 			},
 		]);

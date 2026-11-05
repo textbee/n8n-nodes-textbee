@@ -47,7 +47,7 @@ export function requireObjectIds(...names: string[]) {
 }
 
 /**
- * Remove webhook signing secrets and device push tokens from output, so they
+ * Remove webhook signing secrets and device push tokens and serials from output, so they
  * never land in n8n execution data or in front of an AI agent.
  */
 export function stripSecrets(items: INodeExecutionData[]): INodeExecutionData[] {
@@ -57,7 +57,10 @@ export function stripSecrets(items: INodeExecutionData[]): INodeExecutionData[] 
 		const subscription = json.webhookSubscriptionData as IDataObject | undefined;
 		if (subscription && typeof subscription === 'object') delete subscription.signingSecret;
 		const device = json.deviceData as IDataObject | undefined;
-		if (device && typeof device === 'object') delete device.fcmToken;
+		if (device && typeof device === 'object') {
+			delete device.fcmToken;
+			delete device.serial;
+		}
 	}
 	return items;
 }

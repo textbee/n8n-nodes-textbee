@@ -32,7 +32,7 @@ export const webhookGetNotificationsDescription: INodeProperties[] = [
 							'={{ Number($response.body?.data?.meta?.page ?? 0) < Number($response.body?.data?.meta?.totalPages ?? 0) }}',
 						request: {
 							qs: {
-								page: '={{ Number($response.body.data.meta.page) + 1 }}',
+								page: '={{ Number($response.body?.data?.meta?.page ?? 0) + 1 }}',
 								limit: 100,
 							},
 						},

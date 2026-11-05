@@ -24,7 +24,7 @@ export async function textbeeApiRequest(
 	qs: IDataObject = {},
 ) {
 	const credentials = await this.getCredentials('textbeeApi');
-	const baseURL = normalizeBaseUrl(credentials.baseUrl as string);
+	const baseURL = normalizeBaseUrl(String(credentials.baseUrl ?? ''));
 
 	const options: IHttpRequestOptions = {
 		method,

@@ -6,7 +6,8 @@
 #
 # The guard compares package.json against the git tags, so the workflow is
 # idempotent. Pushes that do not change the version are a no-op, and a failed
-# release can be retried by pushing again or running the workflow by hand.
+# release can be retried by pushing again or by starting a new run by hand.
+# Do not use "Re-run failed jobs": it reuses the old check outputs.
 #
 # The npm Trusted Publisher for this package points at this file name
 # (publish.yml). Renaming it breaks publishing.
@@ -57,7 +58,7 @@ jobs:
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-          if git rev-parse "v$version" >/dev/null 2>&1; then
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
             echo "should_release=false" >> "$GITHUB_OUTPUT"
             echo "v$version is already tagged, nothing to release."
             exit 0
@@ -68,9 +69,10 @@ jobs:
           # are the only npm commands, because npm is the CLI that performs
           # the trusted-publishing OIDC exchange. Everything else uses pnpm.
           #
-          # A version published by hand (the first one, since npm Trusted
-          # Publishing cannot create a package) only needs its tag.
-          if npm view "$name@$version" version >/dev/null 2>&1; then
+          # A version that is already on npm (for example published by hand to
+          # recover a failed run) only needs its tag. Versions published by
+          # hand have no provenance, so n8n cannot verify them.
+          if [ "$(npm view "$name@$version" version 2>/dev/null)" = "$version" ]; then
             echo "on_npm=true" >> "$GITHUB_OUTPUT"
             echo "$name@$version is on npm but untagged, tagging only."
           else
