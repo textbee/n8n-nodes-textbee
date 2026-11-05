@@ -1,0 +1,19 @@
+{
+	"node": "@textbee/n8n-nodes-textbee.textbee",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Communication", "Marketing & Content"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://textbee.dev/docs/getting-started/api-keys"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://textbee.dev/docs/agents/n8n"
+			}
+		]
+	},
+	"alias": ["SMS", "Text message", "Android", "SMS gateway"]
+}

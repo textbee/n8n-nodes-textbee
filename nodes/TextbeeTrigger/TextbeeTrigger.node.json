@@ -1,0 +1,22 @@
+{
+	"node": "@textbee/n8n-nodes-textbee.textbeeTrigger",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Communication", "Marketing & Content"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://textbee.dev/docs/getting-started/api-keys"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://textbee.dev/docs/agents/n8n"
+			},
+			{
+				"url": "https://textbee.dev/docs/webhooks"
+			}
+		]
+	},
+	"alias": ["SMS", "Incoming SMS", "Text message", "Webhook"]
+}
