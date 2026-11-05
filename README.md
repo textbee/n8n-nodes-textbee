@@ -76,6 +76,12 @@ textbee signs every delivery. Requests with a missing or wrong signature get HTT
 
 When the textbee API reports timestamped signatures for the subscription, the trigger requires a valid `X-Textbee-Signature` and rejects requests that only carry `X-Signature`. Older and self-hosted textbee versions that do not send the timestamped header are still accepted with `X-Signature`.
 
+Notes:
+
+- After you upgrade this package, publish your textbee Trigger workflows again (or restart n8n). The trigger learns that the API supports timestamped signatures when the workflow is published.
+- The n8n server clock must be correct (use NTP). A clock that is more than 5 minutes off makes every delivery fail.
+- If you change the credential signing secret, publish the workflows again so textbee uses the new secret.
+
 ## Usage
 
 ### Send an SMS
