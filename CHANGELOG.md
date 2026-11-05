@@ -1,42 +1,10 @@
-## <small>1.0.3 (2026-10-30)</small>
+# Changelog
 
-* fix(ci): mint GitHub App token to push releases past protected main ([389dc7b](https://github.com/aixRun/n8n-nodes-textbee/commit/389dc7b))
-* chore: fix email typo ([eaa0533](https://github.com/aixRun/n8n-nodes-textbee/commit/eaa0533))
+## 1.0.0 (2026-11-05)
 
-## <small>1.0.2 (2026-10-30)</small>
+First release as the official `@textbee/n8n-nodes-textbee` package. The nodes were first built by [Julius Haring](https://github.com/JuliusHaring) and published as `@aixrun/n8n-nodes-textbee`, which is no longer available.
 
-* fix(ci): document Trusted Publisher GitHub org casing as aixRun ([7516b58](https://github.com/aixRun/n8n-nodes-textbee/commit/7516b58))
-
-## <small>1.0.1 (2026-10-30)</small>
-
-* fix(ci): fall back to npm stage publish for Trusted Publisher defaults ([21d24a6](https://github.com/aixRun/n8n-nodes-textbee/commit/21d24a6))
-
-## 1.0.0 (2026-10-30)
-
-* fix(ci): use npm 11+ for trusted publishing OIDC ([25a290b](https://github.com/aixRun/n8n-nodes-textbee/commit/25a290b))
-* chore(release): 1.0.0 [skip ci] ([8594272](https://github.com/aixRun/n8n-nodes-textbee/commit/8594272))
-* chore(release): 1.0.0 [skip ci] ([9841c48](https://github.com/aixRun/n8n-nodes-textbee/commit/9841c48))
-* chore(release): 1.0.0 [skip ci] ([bae8754](https://github.com/aixRun/n8n-nodes-textbee/commit/bae8754))
-* ci: add semantic release ([7ae55e9](https://github.com/aixRun/n8n-nodes-textbee/commit/7ae55e9))
-* ci: use a single workflow for lint, release, and npm publish ([9da66d8](https://github.com/aixRun/n8n-nodes-textbee/commit/9da66d8))
-* feat: initial commit ([c08bda1](https://github.com/aixRun/n8n-nodes-textbee/commit/c08bda1))
-
-## 1.0.0 (2026-10-30)
-
-* chore(release): 1.0.0 [skip ci] ([9841c48](https://github.com/aixRun/n8n-nodes-textbee/commit/9841c48))
-* chore(release): 1.0.0 [skip ci] ([bae8754](https://github.com/aixRun/n8n-nodes-textbee/commit/bae8754))
-* ci: add semantic release ([7ae55e9](https://github.com/aixRun/n8n-nodes-textbee/commit/7ae55e9))
-* ci: use a single workflow for lint, release, and npm publish ([9da66d8](https://github.com/aixRun/n8n-nodes-textbee/commit/9da66d8))
-* feat: initial commit ([c08bda1](https://github.com/aixRun/n8n-nodes-textbee/commit/c08bda1))
-
-## 1.0.0 (2026-10-30)
-
-* ci: add semantic release ([7ae55e9](https://github.com/aixRun/n8n-nodes-textbee/commit/7ae55e9))
-* ci: use a single workflow for lint, release, and npm publish ([9da66d8](https://github.com/aixRun/n8n-nodes-textbee/commit/9da66d8))
-* chore(release): 1.0.0 [skip ci] ([bae8754](https://github.com/aixRun/n8n-nodes-textbee/commit/bae8754))
-* feat: initial commit ([c08bda1](https://github.com/aixRun/n8n-nodes-textbee/commit/c08bda1))
-
-## 1.0.0 (2026-10-30)
-
-* ci: add semantic release ([7ae55e9](https://github.com/aixRun/n8n-nodes-textbee/commit/7ae55e9))
-* feat: initial commit ([c08bda1](https://github.com/aixRun/n8n-nodes-textbee/commit/c08bda1))
+- textbee node: send SMS, send bulk SMS, read messages and send batches, list devices, account stats, manage webhook subscriptions.
+- textbee Trigger node: start workflows on received, sent, delivered and failed SMS. The trigger updates its webhook subscription in place, so it does not leave unused subscriptions behind.
+- IDs used in request paths are validated before the request is sent.
+- Webhook signing secrets and device push tokens are removed from node output.

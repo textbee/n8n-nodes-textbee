@@ -1,114 +1,110 @@
-# @aixrun/n8n-nodes-textbee
+# @textbee/n8n-nodes-textbee
 
+[![npm](https://img.shields.io/npm/v/@textbee/n8n-nodes-textbee.svg)](https://www.npmjs.com/package/@textbee/n8n-nodes-textbee)
+[![CI](https://github.com/textbee/n8n-nodes-textbee/actions/workflows/ci.yml/badge.svg)](https://github.com/textbee/n8n-nodes-textbee/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![npm](https://img.shields.io/npm/v/@aixrun/n8n-nodes-textbee.svg)](https://www.npmjs.com/package/@aixrun/n8n-nodes-textbee)
 
-Unofficial n8n community node for [textbee](https://textbee.dev) — send and receive SMS through your Android phone over REST and webhooks.
+Official [n8n](https://n8n.io) nodes for [textbee.dev](https://textbee.dev), the open-source SMS gateway. Send and receive SMS in your workflows through your own Android phone.
 
-Maintained by [aixRun](https://www.aixrun.de) ([info@aixrun.de](mailto:info@aixrun.de)).
+- **textbee** node: send SMS (one message or bulk), read message history, list devices, manage webhook subscriptions.
+- **textbee Trigger** node: start a workflow when your phone receives an SMS, or when a sent SMS is sent, delivered, or fails.
 
-**Not affiliated with or endorsed by textbee / Nuver Labs.** The textbee name is used only to identify the service this package connects to. This package does not include the textbee logo or other brand assets ([textbee Terms of Service](https://textbee.dev/terms-of-service): MIT covers their code, not their name or logo).
+Both nodes can also be used as tools by the n8n AI Agent.
 
 ## Installation
 
-### Self-hosted n8n (GUI)
+### Self-hosted n8n
 
-1. Go to **Settings → Community Nodes**
-2. Select **Install**
-3. Enter `@aixrun/n8n-nodes-textbee`
-4. Agree to the risks and install
+1. Go to **Settings > Community Nodes**.
+2. Select **Install**.
+3. Enter `@textbee/n8n-nodes-textbee`.
+4. Agree to the risks and install.
 
-### Self-hosted n8n (environment)
-
-```bash
-N8N_COMMUNITY_PACKAGES=@aixrun/n8n-nodes-textbee
-```
-
-### Local development
+Or set the package in the environment:
 
 ```bash
-npm install
-npm run dev
+N8N_COMMUNITY_PACKAGES=@textbee/n8n-nodes-textbee
 ```
 
-This starts a local n8n instance with the node loaded (`n8n-node dev`). Open http://localhost:5678 and search for **TextBee**.
+### n8n Cloud
+
+The nodes are in review for n8n verification. After approval you can add them from the nodes panel in n8n Cloud.
 
 ## Credentials
 
-Create a **TextBee API** credential:
+Create a **Textbee API** credential:
 
-| Field                      | Required     | Description                                                                                                                                                      |
-| -------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **API Key**                | Yes          | From the [TextBee dashboard](https://app.textbee.dev/dashboard)                                                                                                  |
-| **Base URL**               | No           | Defaults to `https://api.textbee.dev`. Change for [self-hosted](https://textbee.dev/docs/self-hosting) instances. `/api/v1` is optional and added automatically. |
-| **Webhook Signing Secret** | Trigger only | At least 20 characters. Used to create TextBee webhook subscriptions and verify `X-Signature`.                                                                   |
+| Field                      | Required     | Description                                                                                                                                                       |
+| -------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API Key**                | Yes          | From the [textbee dashboard](https://app.textbee.dev/dashboard). See [API keys](https://textbee.dev/docs/getting-started/api-keys).                               |
+| **Base URL**               | No           | Defaults to `https://api.textbee.dev`. Change it for [self-hosted](https://textbee.dev/docs/self-hosting) instances. The `/api/v1` suffix is added automatically. |
+| **Webhook Signing Secret** | Trigger only | At least 20 characters. textbee signs every webhook delivery with it, and the trigger rejects requests without a valid signature.                                 |
 
-## Nodes
+## Operations
 
-### TextBee (action)
+### textbee
 
-Resources:
+| Resource             | Operations                                                |
+| -------------------- | --------------------------------------------------------- |
+| Message              | Send, Send Bulk, Get Many, Get, Get Batch                 |
+| Device               | Get Many, Get                                             |
+| Account              | Get (totals for sent and received SMS, devices, API keys) |
+| Webhook Subscription | Create, Get, Get Many, Update, Delete, Get Notifications  |
 
-- **Message** — Send, Send Bulk, Get Many, Get, Get Batch
-- **Device** — Get Many, Get
-- **Account** — Get account totals (sent/received SMS, devices, API keys)
-- **Webhook Subscription** — Create, Get, Get Many, Update, Delete, Get Notifications
+### textbee Trigger
 
-### TextBee Trigger
+Starts a workflow on these events: `MESSAGE_RECEIVED`, `MESSAGE_SENT`, `MESSAGE_DELIVERED`, `MESSAGE_FAILED`, `UNKNOWN_STATE`.
 
-Starts a workflow when TextBee POSTs an SMS event (`MESSAGE_RECEIVED`, `MESSAGE_SENT`, `MESSAGE_DELIVERED`, `MESSAGE_FAILED`, `UNKNOWN_STATE`).
+When you activate the workflow, the trigger registers a webhook subscription in textbee that points at the n8n production webhook URL. When you deactivate it, the trigger deletes the subscription. If the URL, the events, or the signing secret change, the trigger updates the existing subscription instead of creating a new one.
 
-On activate, the trigger registers a webhook subscription with TextBee using your n8n production webhook URL and the credential signing secret. On deactivate, it deletes that subscription.
+Every request is checked against the `X-Signature` header (HMAC-SHA256 of the raw body). Requests with a missing or wrong signature get HTTP 401.
 
-Incoming requests are verified with HMAC-SHA256 over the raw body (`X-Signature` hex digest). Invalid signatures receive HTTP 401.
-
-## Usage examples
+## Usage
 
 ### Send an SMS
 
-1. Add a **TextBee** node
-2. Resource: **Message**, Operation: **Send**
-3. Set **Message** and **Recipients** (E.164, comma-separated)
-4. Optionally pick a **Device**
+1. Add a **textbee** node.
+2. Set Resource to **Message** and Operation to **Send**.
+3. Enter the **Message** and the **Recipients** (E.164 format, for example `+15555550123`, comma-separated).
+4. Optionally pick a **Device**. Without one, textbee uses your default device.
 
-A `200` means TextBee accepted the batch (`smsBatchId`). It is not delivery confirmation — use **Get Batch** or **Get Many** filtered by `smsBatchId`.
+A successful response means textbee accepted and queued the message. It is not a delivery confirmation. To follow the status, use **Get Many** with the `smsBatchId` filter, or a **textbee Trigger** on **Message Delivered** and **Message Failed**.
 
-### Receive SMS
+### Reply to incoming SMS
 
-1. Enable **Receive SMS** in the TextBee Android app
-2. Add a **TextBee Trigger** and select **Message Received**
-3. Activate the workflow (production URL must be publicly reachable HTTPS)
-4. Ensure the credential has a signing secret (≥20 chars)
+1. In the textbee Android app, turn on **Receive SMS**.
+2. Add a **textbee Trigger** and select **Message Received**.
+3. Connect a **textbee** node with Operation **Send**. Set Recipients to `{{ $json.sender }}` and write the reply in Message.
+4. Activate the workflow. The production webhook URL must be public, because textbee does not deliver to localhost or private addresses. In development, use a tunnel.
 
-TextBee may retry deliveries. Deduplicate using the `idempotencyKey` field in the payload.
+textbee retries failed deliveries. Use the `idempotencyKey` field of the payload to skip duplicates.
 
-## API reference
+## Resources
 
-- [TextBee API reference](https://textbee.dev/docs/api-reference)
+- [n8n guide for textbee](https://textbee.dev/docs/agents/n8n)
+- [textbee API reference](https://textbee.dev/docs/api-reference)
 - [Webhooks](https://textbee.dev/docs/webhooks)
-- [Self-hosting](https://textbee.dev/docs/self-hosting)
+- [Self-hosting textbee](https://textbee.dev/docs/self-hosting)
+- [n8n community nodes documentation](https://docs.n8n.io/integrations/community-nodes/)
 
-## Compatibility
+## Development
 
-- Node.js ≥ 22
-- Built with `@n8n/node-cli` for community node verification guidelines (MIT, no runtime dependencies, English UI)
+This project uses pnpm.
 
-## CI / Publishing
+```bash
+pnpm install
+pnpm dev        # starts n8n on http://localhost:5678 with these nodes loaded
+pnpm test       # unit tests
+pnpm lint       # n8n community node linter
+pnpm build
+```
 
-One workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+Releases are driven by the `version` field in `package.json`. Bump it in a pull request. When the pull request is merged to `main`, the [publish workflow](.github/workflows/publish.yml) publishes the package to npm with a provenance attestation, then tags the commit and creates the GitHub release.
 
-- **Pull requests:** lint + build
-- **Push to `main`:** lint + build → semantic-release (changelog, version, tag) → npm publish with provenance
+## Credits
 
-Use conventional commits (`feat:`, `fix:`, `feat!:`, …).
-
-On npm ([aixrun](https://www.npmjs.com/settings/aixrun/packages)), set Trusted Publisher to workflow **`ci.yml`** (or set `NPM_TOKEN`).
-
-After publish: `npx @n8n/scan-community-package @aixrun/n8n-nodes-textbee`  
-Local hooks: `npx husky` · dry-run: `npx semantic-release --dry-run`
+[Julius Haring](https://github.com/JuliusHaring) ([aixRun](https://www.aixrun.de)) built the first version of these nodes and handed the project over to textbee. Thank you, Julius.
 
 ## License
 
-This package is [MIT](./LICENSE.md).
-
-Third-party notices (Heroicons glyph attribution, textbee trademark/logo boundaries, affiliation disclaimer) are in [NOTICE.md](./NOTICE.md).
+[MIT](./LICENSE.md). Third-party notices are in [NOTICE.md](./NOTICE.md).
