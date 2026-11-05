@@ -128,7 +128,7 @@ describe('create', () => {
 				method: 'PATCH',
 				url: `/webhooks/${ID}`,
 				body: {
-					name: 'n8n: Inbound SMS',
+					name: 'n8n: Inbound SMS (n8n.example.com)',
 					deliveryUrl: URL,
 					events: ['MESSAGE_RECEIVED'],
 					signingSecret: SECRET,

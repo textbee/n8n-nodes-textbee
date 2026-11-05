@@ -36,6 +36,29 @@ export function planSubscription(
 	return matches ? 'keep' : 'update';
 }
 
+/** Longest subscription name the textbee API accepts. */
+const MAX_NAME_LENGTH = 64;
+
+/**
+ * `n8n: <workflow name> (<host>)`, cut to the API limit. The workflow name is
+ * shortened first, so the n8n host stays visible when it fits.
+ */
+export function subscriptionName(workflowName: string, deliveryUrl: string): string {
+	const prefix = 'n8n: ';
+	let host = '';
+	try {
+		host = new URL(deliveryUrl).host;
+	} catch {
+		// Not a valid URL: use the name without a host.
+	}
+	if (!host) return `${prefix}${workflowName}`.slice(0, MAX_NAME_LENGTH).trimEnd();
+
+	const suffix = ` (${host})`;
+	const room = MAX_NAME_LENGTH - prefix.length - suffix.length;
+	if (room < 1) return `${prefix}${workflowName}${suffix}`.slice(0, MAX_NAME_LENGTH);
+	return `${prefix}${workflowName.slice(0, room).trimEnd()}${suffix}`;
+}
+
 /**
  * The credential secret wins when set, so 1.0.0 setups keep working.
  * Otherwise use the secret the trigger stored for its own subscription.

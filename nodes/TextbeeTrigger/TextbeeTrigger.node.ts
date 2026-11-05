@@ -14,6 +14,7 @@ import {
 	isNotFoundError,
 	planSubscription,
 	resolveSigningSecret,
+	subscriptionName,
 	type DesiredSubscription,
 	type WebhookSubscription,
 } from '../Textbee/shared/subscription';
@@ -91,8 +92,8 @@ async function desiredSubscription(
 	};
 }
 
-function subscriptionName(this: IHookFunctions): string {
-	return `n8n: ${this.getWorkflow().name ?? 'workflow'}`.slice(0, 64);
+function nameFor(this: IHookFunctions, desired: DesiredSubscription): string {
+	return subscriptionName(this.getWorkflow().name ?? 'workflow', desired.deliveryUrl);
 }
 
 /** PATCH a subscription to the desired state. Returns false when it no longer exists. */
@@ -103,7 +104,7 @@ async function updateSubscription(
 ): Promise<boolean> {
 	try {
 		await textbeeApiRequest.call(this, 'PATCH', webhookPath.call(this, webhookId), {
-			name: subscriptionName.call(this),
+			name: nameFor.call(this, desired),
 			deliveryUrl: desired.deliveryUrl,
 			events: desired.events,
 			signingSecret: desired.signingSecret,
@@ -219,7 +220,7 @@ export class TextbeeTrigger implements INodeType {
 				}
 
 				const response = (await textbeeApiRequest.call(this, 'POST', '/webhooks', {
-					name: subscriptionName.call(this),
+					name: nameFor.call(this, desired),
 					deliveryUrl: desired.deliveryUrl,
 					signingSecret: desired.signingSecret,
 					events: desired.events,
