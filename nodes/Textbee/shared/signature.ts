@@ -55,6 +55,7 @@ export function verifyTimestampedSignature(
 	return signatures.some((signature) => safeEqualHex(expected, signature));
 }
 
+/** Constant-time compare of a hex digest with a header value (trimmed, any case). */
 function safeEqualHex(expected: string, provided: string): boolean {
 	const a = Buffer.from(expected, 'utf8');
 	const b = Buffer.from(provided.trim().toLowerCase(), 'utf8');

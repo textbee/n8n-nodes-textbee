@@ -105,6 +105,7 @@ function storeSignatureVersion(
 	else delete webhookData.signatureVersion;
 }
 
+/** Subscription name for this workflow and its delivery URL host. */
 function nameFor(this: IHookFunctions, desired: DesiredSubscription): string {
 	return subscriptionName(this.getWorkflow().name ?? 'workflow', desired.deliveryUrl);
 }
@@ -186,6 +187,7 @@ export class TextbeeTrigger implements INodeType {
 
 	webhookMethods = {
 		default: {
+			/** True when the stored subscription already matches the desired state. */
 			async checkExists(this: IHookFunctions): Promise<boolean> {
 				const webhookData = this.getWorkflowStaticData('node');
 				const webhookId = webhookData.webhookId as string | undefined;
@@ -216,6 +218,7 @@ export class TextbeeTrigger implements INodeType {
 				return desired !== undefined && planSubscription(subscription, desired) === 'keep';
 			},
 
+			/** Patch the stored or a same-URL subscription, else create a new one. */
 			async create(this: IHookFunctions): Promise<boolean> {
 				const webhookData = this.getWorkflowStaticData('node');
 				const desired = (await desiredSubscription.call(this, true)) as DesiredSubscription;
@@ -251,6 +254,7 @@ export class TextbeeTrigger implements INodeType {
 				return true;
 			},
 
+			/** Delete the subscription and forget its id, secret and signature version. */
 			async delete(this: IHookFunctions): Promise<boolean> {
 				const webhookData = this.getWorkflowStaticData('node');
 				const webhookId = webhookData.webhookId as string | undefined;
@@ -271,6 +275,7 @@ export class TextbeeTrigger implements INodeType {
 		},
 	};
 
+	/** Verify the signature and subscription, then start a run for a selected event. */
 	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
 		const credentials = await this.getCredentials('textbeeApi');
 		const webhookData = this.getWorkflowStaticData('node');
