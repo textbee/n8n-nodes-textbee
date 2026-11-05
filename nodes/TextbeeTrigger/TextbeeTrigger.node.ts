@@ -17,6 +17,7 @@ import {
 	type WebhookSubscription,
 } from '../Textbee/shared/subscription';
 import { textbeeApiRequest, toNodeApiError } from '../Textbee/shared/transport';
+import { isObjectId } from '../Textbee/shared/validation';
 
 const EVENT_OPTIONS = [
 	{
@@ -48,6 +49,14 @@ const EVENT_OPTIONS = [
 
 const MIN_SECRET_LENGTH = 20;
 
+/** Build a webhook path from a stored or listed id, refusing anything that is not an ObjectId. */
+function webhookPath(this: IHookFunctions, webhookId: string): string {
+	if (!isObjectId(webhookId)) {
+		throw new NodeOperationError(this.getNode(), 'Stored textbee webhook ID is not a valid ID');
+	}
+	return `/webhooks/${webhookId}`;
+}
+
 async function desiredSubscription(this: IHookFunctions): Promise<DesiredSubscription> {
 	const credentials = await this.getCredentials('textbeeApi');
 	const signingSecret = String(credentials.webhookSigningSecret ?? '');
@@ -75,7 +84,7 @@ async function updateSubscription(
 	desired: DesiredSubscription,
 ): Promise<boolean> {
 	try {
-		await textbeeApiRequest.call(this, 'PATCH', `/webhooks/${webhookId}`, {
+		await textbeeApiRequest.call(this, 'PATCH', webhookPath.call(this, webhookId), {
 			name: subscriptionName.call(this),
 			deliveryUrl: desired.deliveryUrl,
 			events: desired.events,
@@ -149,7 +158,7 @@ export class TextbeeTrigger implements INodeType {
 					const response = (await textbeeApiRequest.call(
 						this,
 						'GET',
-						`/webhooks/${webhookId}`,
+						webhookPath.call(this, webhookId),
 					)) as { data?: WebhookSubscription };
 					subscription = response.data;
 				} catch (error) {
@@ -208,7 +217,7 @@ export class TextbeeTrigger implements INodeType {
 				if (!webhookId) return true;
 
 				try {
-					await textbeeApiRequest.call(this, 'DELETE', `/webhooks/${webhookId}`);
+					await textbeeApiRequest.call(this, 'DELETE', webhookPath.call(this, webhookId));
 				} catch (error) {
 					// Already gone is fine. Surface everything else unchanged.
 					if (!isNotFoundError(error)) throw toNodeApiError(this.getNode(), error);

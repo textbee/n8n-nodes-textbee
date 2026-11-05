@@ -29,6 +29,8 @@ concurrency:
 jobs:
   check:
     name: Check for an unreleased version
+    # Manual runs can pick any branch. Only main is ever released.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -62,6 +64,10 @@ jobs:
           fi
           echo "should_release=true" >> "$GITHUB_OUTPUT"
 
+          # npm view is a read-only registry lookup. It and npm publish below
+          # are the only npm commands, because npm is the CLI that performs
+          # the trusted-publishing OIDC exchange. Everything else uses pnpm.
+          #
           # A version published by hand (the first one, since npm Trusted
           # Publishing cannot create a package) only needs its tag.
           if npm view "$name@$version" version >/dev/null 2>&1; then
@@ -114,7 +120,7 @@ jobs:
         run: pnpm test
 
       - name: Pack
-        run: npm pack --ignore-scripts
+        run: pnpm pack
 
       - name: Upload package
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

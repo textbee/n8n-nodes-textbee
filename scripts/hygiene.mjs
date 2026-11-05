@@ -1,6 +1,6 @@
 // Repo hygiene gate, run in CI. Fails on:
 // - em or en dashes in source or docs (house rule)
-// - the "TextBee" spelling; the brand is lowercase textbee, PascalCase identifiers use Textbee
+// - the camel-cased brand spelling; the brand is lowercase textbee, PascalCase identifiers use Textbee
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -20,6 +20,7 @@ const files = [
 	...walk('nodes'),
 	...walk('credentials'),
 	...walk('test'),
+	...walk('scripts'),
 	'README.md',
 	'NOTICE.md',
 	'CHANGELOG.md',
@@ -30,13 +31,15 @@ for (const file of files) {
 	readFileSync(file, 'utf8')
 		.split('\n')
 		.forEach((line, i) => {
-			if (line.includes('—') || line.includes('–')) {
+			if (line.includes('\u2014') || line.includes('\u2013')) {
 				failures.push(
 					`${file}:${i + 1}: em or en dash found; use a period, comma, colon, or hyphen`,
 				);
 			}
-			if (/TextBee/.test(line)) {
-				failures.push(`${file}:${i + 1}: write "textbee" (or Textbee in identifiers), not TextBee`);
+			if (/Text\u0042ee/.test(line)) {
+				failures.push(
+					`${file}:${i + 1}: write "textbee" (or Textbee in identifiers), not Text\u0042ee`,
+				);
 			}
 		});
 }
