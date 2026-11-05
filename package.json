@@ -1,25 +1,32 @@
 {
-	"name": "@aixrun/n8n-nodes-textbee",
-	"version": "1.0.3",
-	"description": "n8n community node to send and receive SMS via textbee",
+	"name": "@textbee/n8n-nodes-textbee",
+	"version": "1.0.0",
+	"description": "Official n8n nodes for textbee.dev: send and receive SMS through your own Android phone",
 	"license": "MIT",
-	"homepage": "https://github.com/aixRun/n8n-nodes-textbee",
+	"packageManager": "pnpm@9.14.2",
+	"homepage": "https://textbee.dev/docs/agents/n8n",
 	"keywords": [
 		"n8n-community-node-package",
 		"n8n",
 		"textbee",
-		"sms"
+		"sms",
+		"sms-gateway",
+		"android"
 	],
 	"author": {
-		"name": "aixRun",
-		"email": "info@aixrun.de"
+		"name": "textbee",
+		"email": "contact@textbee.dev",
+		"url": "https://textbee.dev"
 	},
+	"contributors": [
+		"Julius Haring (https://github.com/JuliusHaring)"
+	],
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/aixRun/n8n-nodes-textbee.git"
+		"url": "git+https://github.com/textbee/n8n-nodes-textbee.git"
 	},
 	"bugs": {
-		"url": "https://github.com/aixRun/n8n-nodes-textbee/issues"
+		"url": "https://github.com/textbee/n8n-nodes-textbee/issues"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -29,16 +36,18 @@
 	},
 	"scripts": {
 		"build": "n8n-node build",
-		"build:watch": "tsc --watch",
 		"dev": "n8n-node dev",
 		"lint": "n8n-node lint",
 		"lint:fix": "n8n-node lint --fix",
-		"release": "semantic-release",
-		"publish:ci": "n8n-node release",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run --maxWorkers=2",
+		"check:hygiene": "node scripts/hygiene.mjs",
 		"prepublishOnly": "n8n-node prerelease"
 	},
 	"files": [
 		"dist",
+		"!dist/package.json",
+		"!dist/tsconfig.tsbuildinfo",
 		"LICENSE.md",
 		"NOTICE.md"
 	],
@@ -46,40 +55,26 @@
 		"n8nNodesApiVersion": 1,
 		"strict": true,
 		"credentials": [
-			"dist/credentials/TextBeeApi.credentials.js"
+			"dist/credentials/TextbeeApi.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/TextBee/TextBee.node.js",
-			"dist/nodes/TextBeeTrigger/TextBeeTrigger.node.js"
+			"dist/nodes/Textbee/Textbee.node.js",
+			"dist/nodes/TextbeeTrigger/TextbeeTrigger.node.js"
 		]
 	},
 	"devDependencies": {
-		"@commitlint/cli": "^19.8.1",
-		"@commitlint/config-conventional": "^19.8.1",
-		"@n8n/node-cli": "*",
-		"@semantic-release/changelog": "^6.0.3",
-		"@semantic-release/exec": "^7.1.0",
-		"@semantic-release/git": "^10.0.1",
-		"@semantic-release/github": "^11.0.3",
-		"@semantic-release/npm": "^12.0.2",
-		"conventional-changelog-conventionalcommits": "^7.0.2",
+		"@n8n/node-cli": "0.55.5",
+		"@types/node": "22.20.5",
 		"eslint": "9.29.0",
-		"husky": "^9.1.7",
-		"lint-staged": "^15.5.2",
-		"prettier": "3.8.3",
-		"release-it": "20.2.0",
-		"semantic-release": "^24.2.7",
-		"typescript": "5.9.3"
+		"n8n-workflow": "2.16.0",
+		"prettier": "3.9.10",
+		"typescript": "5.9.3",
+		"vitest": "5.1.0"
 	},
 	"peerDependencies": {
 		"n8n-workflow": "*"
 	},
-	"lint-staged": {
-		"*.{js,ts,mjs,cjs}": [
-			"prettier --write"
-		],
-		"*.{json,md,yml,yaml}": [
-			"prettier --write"
-		]
+	"pnpm": {
+		"onlyBuiltDependencies": []
 	}
 }
