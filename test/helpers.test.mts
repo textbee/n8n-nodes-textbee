@@ -6,6 +6,7 @@ import {
 	buildBulkMessages,
 	splitRecipients,
 } from '../nodes/Textbee/shared/bulk';
+import { simSlotExpressionBody } from '../nodes/Textbee/shared/descriptions';
 import { baseUrlExpression, normalizeBaseUrl } from '../nodes/Textbee/shared/baseUrl';
 import {
 	computeSignature,
@@ -300,6 +301,49 @@ describe('bulk messages', () => {
 			'+15555550102',
 		]);
 		expect(splitRecipients(undefined)).toEqual([]);
+	});
+
+	it('sends simSlotIndex 0 and 1, and omits it for Default', () => {
+		expect(
+			buildBulkMessages([
+				{ message: 'a', recipients: '+15555550100', simSlotIndex: 0 },
+				{ message: 'b', recipients: '+15555550100', simSlotIndex: 1 },
+				{ message: 'c', recipients: '+15555550100', simSlotIndex: '' },
+				{ message: 'd', recipients: '+15555550100' },
+				{ message: 'e', recipients: '+15555550100', simSlotIndex: '1' },
+			]),
+		).toEqual([
+			{ message: 'a', recipients: ['+15555550100'], simSlotIndex: 0 },
+			{ message: 'b', recipients: ['+15555550100'], simSlotIndex: 1 },
+			{ message: 'c', recipients: ['+15555550100'] },
+			{ message: 'd', recipients: ['+15555550100'] },
+			{ message: 'e', recipients: ['+15555550100'], simSlotIndex: 1 },
+		]);
+	});
+
+	it('sends a slot that is not a whole number unchanged so the API rejects it', () => {
+		expect(
+			buildBulkMessages([
+				{ message: 'a', recipients: '+15555550100', simSlotIndex: 'SIM 2' },
+				{ message: 'b', recipients: '+15555550100', simSlotIndex: 1.5 },
+				{ message: 'c', recipients: '+15555550100', simSlotIndex: ' ' },
+			]).map((m) => m.simSlotIndex),
+		).toEqual(['SIM 2', 1.5, ' ']);
+	});
+
+	it('evaluates the single-send SIM expression', () => {
+		const evaluate = (value: unknown) =>
+			new Function('$value', `return ${simSlotExpressionBody}`)(value);
+		expect(evaluate('')).toBeUndefined();
+		expect(evaluate(undefined)).toBeUndefined();
+		expect(evaluate(null)).toBeUndefined();
+		expect(evaluate(0)).toBe(0);
+		expect(evaluate(1)).toBe(1);
+		expect(evaluate('1')).toBe(1);
+		expect(evaluate('SIM 2')).toBe('SIM 2');
+		expect(evaluate('abc')).toBe('abc');
+		expect(evaluate(1.5)).toBe(1.5);
+		expect(evaluate(' ')).toBe(' ');
 	});
 
 	it('builds the send-bulk-sms messages array', () => {

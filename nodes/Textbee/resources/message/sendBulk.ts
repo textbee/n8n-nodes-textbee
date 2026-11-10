@@ -49,19 +49,40 @@ export const messageSendBulkDescription: INodeProperties[] = [
 						description: 'Phone numbers or short codes, comma-separated. International format, for example +15555550123, reaches any country.',
 					},
 					{
-						displayName: 'SIM Subscription ID',
-						name: 'simSubscriptionId',
-						type: 'number',
-						default: 0,
-						description:
-							'SIM subscription ID for this entry. Leave at 0 to use the device default SIM.',
-					},
-					{
 						displayName: 'Scheduled At',
 						name: 'scheduledAt',
 						type: 'dateTime',
 						default: '',
 						description: 'Optional ISO schedule time (up to 72 hours ahead)',
+					},
+					{
+						displayName: 'SIM',
+						name: 'simSlotIndex',
+						type: 'options',
+						options: [
+							{
+								name: 'Default (Phone Decides)',
+								value: '',
+								description: 'Do not choose a SIM. The phone uses its default SIM.',
+							},
+							{
+								name: 'SIM 1',
+								value: 0,
+							},
+							{
+								name: 'SIM 2',
+								value: 1,
+							},
+						],
+						default: '',
+						description: 'Which SIM sends the message, by its slot in the phone. Default lets the phone decide. If the slot has no active SIM, the message fails and is never sent from another SIM. You can also switch to Expression and return 0 for SIM 1 or 1 for SIM 2.',
+					},
+					{
+						displayName: 'SIM Subscription ID (Older)',
+						name: 'simSubscriptionId',
+						type: 'number',
+						default: 0,
+						description: 'Older way to choose a SIM, by its Android subscription ID. Leave at 0 to skip it. The SIM option is preferred and wins when both are set.',
 					},
 				],
 			},

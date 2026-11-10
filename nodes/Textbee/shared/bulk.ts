@@ -8,6 +8,7 @@ import {
 export type BulkMessageInput = {
 	message?: string;
 	recipients?: string;
+	simSlotIndex?: number | string;
 	simSubscriptionId?: number;
 	scheduledAt?: string;
 };
@@ -15,6 +16,7 @@ export type BulkMessageInput = {
 export type BulkMessage = {
 	message: string;
 	recipients: string[];
+	simSlotIndex?: number | string;
 	simSubscriptionId?: number;
 	scheduledAt?: string;
 };
@@ -42,6 +44,12 @@ export function buildBulkMessages(entries: BulkMessageInput[]): BulkMessage[] {
 			message: entry.message ?? '',
 			recipients: splitRecipients(entry.recipients),
 		};
+		// Empty means Default: omit. 0 is a real slot (SIM 1), so do not test for truthiness.
+		// A value that is not a whole number goes out unchanged so the API returns its 400.
+		if (entry.simSlotIndex !== undefined && entry.simSlotIndex !== null && entry.simSlotIndex !== '') {
+			const slot = typeof entry.simSlotIndex === 'string' && entry.simSlotIndex.trim() === '' ? NaN : Number(entry.simSlotIndex);
+			message.simSlotIndex = Number.isInteger(slot) ? slot : entry.simSlotIndex;
+		}
 		// 0 is the field default and means "use the device default SIM".
 		if (entry.simSubscriptionId) message.simSubscriptionId = entry.simSubscriptionId;
 		if (entry.scheduledAt) {
