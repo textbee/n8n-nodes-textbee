@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 (2026-11-13)
 
 - New SIM option on Send and Send Bulk. Pick SIM 1 or SIM 2 by its slot in the phone. Default lets the phone decide and sends nothing. An expression that returns 0 or 1 also works.
 - The SIM Subscription ID field is now named SIM Subscription ID (Older). It still works, but the SIM option wins when both are set.
