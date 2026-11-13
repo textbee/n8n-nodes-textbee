@@ -90,6 +90,11 @@ Notes:
 2. Set Resource to **Message** and Operation to **Send**.
 3. Enter the **Message** and the **Recipients** (phone numbers or short codes, comma-separated). International format, for example `+15555550123`, reaches any country. Local numbers and short codes reach recipients in the sending phone's country.
 4. Optionally pick a **Device**. Without one, textbee uses your default device.
+5. Optionally pick a **SIM**. **SIM 1** and **SIM 2** are the slots in the phone. **Default (Phone Decides)** sends no SIM choice, so the phone uses its default SIM. An expression that returns `0` (SIM 1) or `1` (SIM 2) also works.
+
+If the slot has no active SIM, the message fails with the error code `SIM_SLOT_EMPTY`. textbee never sends it from another SIM. The older **SIM Subscription ID (Older)** field still works, but Android can change that ID after a SIM swap. When you set both, the **SIM** option wins.
+
+In **Send Bulk**, each message entry has its own **SIM** field.
 
 A successful response means textbee accepted and queued the message. It is not a delivery confirmation. To follow the status, use **Get Many** with the `smsBatchId` filter, or a **textbee Trigger** on **Message Delivered** and **Message Failed**.
 

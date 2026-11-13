@@ -44,3 +44,12 @@ export const unwrapDataPostReceive = [
 		},
 	},
 ];
+
+/**
+ * Body of the routing expression for the SIM dropdown. Empty means Default and
+ * omits the field. A whole number is sent as a number (0 is SIM 1). Anything
+ * else is sent unchanged so the API answers with a 400 instead of silently
+ * using the default SIM.
+ */
+export const simSlotExpressionBody =
+	"$value === '' || $value === undefined || $value === null ? undefined : (Number.isInteger(typeof $value === 'string' && $value.trim() === '' ? NaN : Number($value)) ? Number($value) : $value)";
