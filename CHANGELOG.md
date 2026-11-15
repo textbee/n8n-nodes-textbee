@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 (2026-11-15)
 
 - Requests to the textbee API name the node and its version.
 
