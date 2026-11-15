@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Requests to the textbee API name the node and its version.
+
 ## 1.2.0 (2026-11-13)
 
 - New SIM option on Send and Send Bulk. Pick SIM 1 or SIM 2 by its slot in the phone. Default lets the phone decide and sends nothing. An expression that returns 0 or 1 also works.
