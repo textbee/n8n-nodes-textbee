@@ -5,9 +5,14 @@ import { describe, expect, it } from 'vitest';
 
 import { Textbee } from '../nodes/Textbee/Textbee.node';
 import { TextbeeTrigger } from '../nodes/TextbeeTrigger/TextbeeTrigger.node';
+import { TextbeeApi } from '../credentials/TextbeeApi.credentials';
+import { CLIENT_NAME } from '../nodes/Textbee/shared/client';
 
 const root = join(__dirname, '..');
-const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { name: string };
+const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
+	name: string;
+	version: string;
+};
 
 function codex(path: string): { node: string } {
 	return JSON.parse(readFileSync(join(root, path), 'utf8'));
@@ -51,5 +56,16 @@ describe('node descriptions', () => {
 				expect(operation.routing?.send?.preSend?.length, url).toBeGreaterThan(0);
 			}
 		}
+	});
+});
+
+describe('client name', () => {
+	it('matches the package version', () => {
+		expect(CLIENT_NAME).toBe(`textbee-n8n/${pkg.version}`);
+	});
+
+	it('is sent with every authenticated request', () => {
+		const headers = new TextbeeApi().authenticate.properties.headers as Record<string, string>;
+		expect(headers['x-sdk-client']).toBe(CLIENT_NAME);
 	});
 });

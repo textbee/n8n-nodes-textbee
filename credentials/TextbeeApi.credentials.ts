@@ -7,6 +7,7 @@ import type {
 } from 'n8n-workflow';
 
 import { baseUrlExpression } from '../nodes/Textbee/shared/baseUrl';
+import { CLIENT_NAME } from '../nodes/Textbee/shared/client';
 
 export class TextbeeApi implements ICredentialType {
 	name = 'textbeeApi';
@@ -53,6 +54,7 @@ export class TextbeeApi implements ICredentialType {
 		properties: {
 			headers: {
 				'x-api-key': '={{$credentials.apiKey}}',
+				'x-sdk-client': CLIENT_NAME,
 			},
 		},
 	};
